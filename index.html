@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyweb Pages</title>
+    <script src="https://kihtrak.com/cloud_variable/cloudify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; }
+        .container { max-width: 900px; margin: 2em auto; padding: 1em; background-color: #fff; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .view { display: none; } .view.active { display: block; }
+        h1, h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 0.5em; }
+        .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .header-actions button { margin-left: 10px; }
+        .button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; text-decoration: none; font-size: 16px; }
+        .button:hover { background-color: #0056b3; }
+        .button.secondary { background-color: #6c757d; } .button.utility { background-color: #17a2b8; }
+        .button.success { background-color: #28a745; }
+        input[type="text"], textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 300px; font-family: monospace; }
+        #project-list { list-style: none; padding: 0; }
+        #project-list li { background-color: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        #preview-frame { width: 100%; height: 60vh; border: 1px solid #ccc; border-radius: 5px; }
+        #true-fullscreen-view { display: none; width: 100%; height: 100%; }
+        #fullscreen-iframe { width: 100%; height: 100%; border: none; }
+        #cloud-status { font-size: 14px; font-weight: bold; padding: 5px 10px; border-radius: 5px; }
+        .status-connecting { color: #d97706; background-color: #fef3c7; } .status-synced { color: #15803d; background-color: #dcfce7; } .status-saving { color: #2563eb; background-color: #dbeafe; }
+        .tab-buttons { border-bottom: 1px solid #ccc; }
+        .tab-button { background-color: #f1f1f1; border: 1px solid #ccc; border-bottom: none; padding: 10px 15px; cursor: pointer; border-radius: 5px 5px 0 0; }
+        .tab-button.active { background-color: #fff; border-bottom: 1px solid #fff; }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <input type="file" id="zip-uploader" accept=".zip" style="display:none;" onchange="handleZipUpload(this.files[0])">
+    <input type="file" id="html-uploader" accept=".html,.htm" style="display:none;" onchange="handleHtmlFileUpload(this.files[0])">
+
+    <div class="container">
+        <div id="main-view" class="view active">
+            <div class="header">
+                <div class="header-title"><h1>Polyweb</h1><span id="cloud-status"></span></div>
+                <div class="header-actions">
+                    <button class="button success" onclick="document.getElementById('zip-uploader').click()">Upload .zip</button>
+                    <button class="button utility" onclick="document.getElementById('html-uploader').click()">Upload .html</button>
+                    <button class="button" onclick="showView('editor-view', true)">Create Manually</button>
+                </div>
+            </div>
+            <input type="text" id="search-box" onkeyup="filterProjects()" placeholder="Search for projects...">
+            <ul id="project-list"></ul>
+        </div>
+        <div id="editor-view" class="view">
+             <div class="header"><h2 id="editor-title">Create a New Site</h2><button class="button secondary" onclick="showView('main-view')">Back to List</button></div>
+            <div><label for="project-name">Project Path</label><input type="text" id="project-name" placeholder="my-cool-site"></div>
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab(event, 'html')">index.html</button>
+                <button class="tab-button" onclick="openTab(event, 'css')">style.css</button>
+                <button class="tab-button" onclick="openTab(event, 'js')">script.js</button>
+            </div>
+            <div id="html" class="tab-content active"><textarea id="project-html" placeholder="<!-- Your HTML code here -->"></textarea></div>
+            <div id="css" class="tab-content"><textarea id="project-css" placeholder="/* Your CSS code here */"></textarea></div>
+            <div id="js" class="tab-content"><textarea id="project-js" placeholder="// Your JavaScript code here"></textarea></div>
+            <button class="button" onclick="saveProject()">Publish</button>
+        </div>
+        <div id="preview-view" class="view">
+             <div class="header"><h2 id="preview-title"></h2><div><button class="button utility" onclick="goFullscreen()">Fullscreen</button><button class="button secondary" onclick="showView('main-view')">Back to List</button></div></div>
+             <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+    </div>
+    
+    <div id="true-fullscreen-view"><iframe id="fullscreen-iframe" sandbox="allow-scripts allow-same-origin"></iframe></div>
+
+    <script>
+        var cloud_website_database;
+        let localDatabaseState = "";
+        const mainContainer = document.querySelector('.container');
+        const views = document.querySelectorAll('.view');
+        const cloudStatus = document.getElementById('cloud-status');
+        const projectNameInput = document.getElementById('project-name');
+        const projectHtmlInput = document.getElementById('project-html');
+        const projectCssInput = document.getElementById('project-css');
+        const projectJsInput = document.getElementById('project-js');
+
+        setCloudStatus('connecting');
+        initializeApp();
+        
+        function initializeApp() {
+            if (typeof cloud_website_database !== 'undefined') {
+                setCloudStatus('synced');
+                handleUrlRouting();
+                setInterval(liveSync, 100);
+            } else {
+                setTimeout(initializeApp, 100);
+            }
+        }
+
+        function liveSync() {
+            if (cloud_website_database !== localDatabaseState && document.getElementById('main-view').classList.contains('active')) {
+                renderProjectList();
+                filterProjects();
+            }
+        }
+        
+        function getProjects() {
+            try { return JSON.parse(cloud_website_database || "{}"); } catch (e) { return {}; }
+        }
+
+        function saveProjects(projects) {
+            cloud_website_database = JSON.stringify(projects, null, 2);
+        }
+
+        function saveProject() {
+            const name = projectNameInput.value.trim();
+            if (!name || !/^[a-zA-Z0-9-]+$/.test(name)) { alert('Invalid project path.'); return; }
+            setCloudStatus('saving');
+            const currentProjects = getProjects();
+            currentProjects[name] = {
+                "index.html": projectHtmlInput.value,
+                "style.css": projectCssInput.value,
+                "script.js": projectJsInput.value
+            };
+            saveProjects(currentProjects);
+            setTimeout(() => {
+                setCloudStatus('synced');
+                alert(`Project '${name}' published!`);
+                history.pushState(null, '', window.location.pathname);
+                showView('main-view');
+            }, 500);
+        }
+
+        function assembleProjectHtml(projectData) {
+            if (typeof projectData === 'string') {
+                return projectData;
+            } else if (typeof projectData === 'object' && projectData !== null) {
+                return `<!DOCTYPE html><html><head><style>${projectData['style.css'] || ''}</style></head><body>${projectData['index.html'] || ''}<script>${projectData['script.js'] || ''}<\/script></body></html>`;
+            }
+            return 'Error: Project data is in an unrecognized format.';
+        }
+
+        function viewProject(name) {
+            const projectData = getProjects()[name];
+            if (projectData === undefined) { alert('Error: Project not found.'); return; }
+            const finalHtml = assembleProjectHtml(projectData);
+            document.getElementById('preview-title').innerText = `Viewing: ${name}`;
+            document.getElementById('preview-frame').srcdoc = finalHtml;
+            showView('preview-view');
+        }
+
+        function handleUrlRouting() {
+            const params = new URLSearchParams(window.location.search);
+            const projectName = params.get('url');
+            if (projectName) {
+                const projectData = getProjects()[projectName];
+                if (projectData) {
+                    const finalHtml = assembleProjectHtml(projectData);
+                    if (params.get('fullscreen') === 'true') {
+                        document.getElementById('fullscreen-iframe').srcdoc = finalHtml;
+                        mainContainer.style.display = 'none';
+                        document.getElementById('true-fullscreen-view').style.display = 'block';
+                    } else {
+                        viewProject(projectName);
+                    }
+                    return;
+                } else {
+                    alert(`Project "${projectName}" not found.`);
+                }
+            }
+            showView('main-view');
+        }
+
+        function handleHtmlFileUpload(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                let fileName = file.name.replace(/\.html?$/i, '').replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+                projectNameInput.value = fileName;
+                projectHtmlInput.value = event.target.result;
+                projectCssInput.value = '';
+                projectJsInput.value = '';
+                document.getElementById('editor-title').innerText = `Editing: ${file.name}`;
+                showView('editor-view');
+            };
+            reader.readAsText(file);
+        }
+
+        async function handleZipUpload(file) {
+            if (!file) return;
+            const zip = await JSZip.loadAsync(file);
+            let projectName = file.name.replace(/\.zip$/i, '').replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+            const html = await zip.file("index.html")?.async("string");
+            const css = await zip.file("style.css")?.async("string");
+            const js = await zip.file("script.js")?.async("string");
+            projectNameInput.value = projectName;
+            projectHtmlInput.value = html || '';
+            projectCssInput.value = css || '';
+            projectJsInput.value = js || '';
+            document.getElementById('editor-title').innerText = `Editing: ${file.name}`;
+            showView('editor-view');
+        }
+
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+            const tabbuttons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabbuttons.length; i++) tabbuttons[i].className = tabbuttons[i].className.replace(" active", "");
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        function showView(viewId, shouldResetForm = false) {
+            views.forEach(view => view.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            if (viewId === 'main-view') {
+                renderProjectList();
+                document.getElementById('zip-uploader').value = '';
+                document.getElementById('html-uploader').value = '';
+            }
+            if (viewId === 'editor-view' && shouldResetForm) {
+                document.getElementById('editor-title').innerText = 'Create a New Site';
+                projectNameInput.value = ''; projectHtmlInput.value = ''; projectCssInput.value = ''; projectJsInput.value = '';
+            }
+        }
+
+        function renderProjectList() {
+            localDatabaseState = cloud_website_database;
+            const projects = getProjects();
+            const projectList = document.getElementById('project-list');
+            projectList.innerHTML = Object.keys(projects).length === 0 ? '<li>No projects yet. Upload or create one!</li>' : '';
+            for (const name in projects) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span id="project-name-display">${name}</span><div><button class="button" onclick="viewProject('${name}')">View Site</button></div>`;
+                projectList.appendChild(li);
+            }
+        }
+
+        function filterProjects() {
+            const filter = document.getElementById('search-box').value.toLowerCase();
+            const items = document.getElementById('project-list').getElementsByTagName('li');
+            for (let item of items) {
+                const name = item.querySelector('#project-name-display').innerText.toLowerCase();
+                item.style.display = name.includes(filter) ? "" : "none";
+            }
+        }
+
+        function setCloudStatus(status) {
+            cloudStatus.className = '';
+            if (status === 'connecting') { cloudStatus.innerText = 'Connecting...'; cloudStatus.classList.add('status-connecting'); }
+            else if (status === 'synced') { cloudStatus.innerText = 'Cloud Synced'; cloudStatus.classList.add('status-synced'); }
+            else if (status === 'saving') { cloudStatus.innerText = 'Saving to Cloud...'; cloudStatus.classList.add('status-saving'); }
+        }
+
+        function goFullscreen() {
+            const iframe = document.getElementById('preview-frame');
+            if (iframe.requestFullscreen) iframe.requestFullscreen();
+            else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+            else if (iframe.msRequestFullscreen) iframe.msRequestFullscreen();
+        }
+    </script>
+</body>
+  </html>
