@@ -2,28 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Downloads</title>
-  <style>
-    body { font-family: system-ui, sans-serif; padding: 2rem; }
-    h1 { margin-bottom: 1rem; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 0.5rem 0; }
-    a { color: #0366d6; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-  </style>
+  <title>LaunchEm Downloads</title>
   <link rel="icon" type="image/x-icon" href="download.ico">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 2rem;
+      background: #f7f7f7;
+      color: #222;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    h2 {
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 0.5rem 0;
+    }
+    a {
+      color: #0366d6;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .card {
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>File downloads</h1>
-  <ul>
-    <li>
-      <strong>LaunchEm! archive:</strong>
-      <a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.1.0.tar.xz?raw=1">Download Newest</a>
-      <ul>
-        <li><a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.1.0.tar.xz?raw=1">Download 1.1.0</a></li>
-        <li><a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.0.1.tar.xz?raw=1">Download 1.0.1</a></li>
-      </ul>
-    </li>
-  </ul>
+
+  <h1>LaunchEm Downloads</h1>
+
+  <div class="card">
+    <h2>Latest Version</h2>
+    <p><strong>LaunchEm 1.1.0</strong></p>
+    <a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.1.0.tar.xz?raw=1">
+      Download LaunchEm 1.1.0
+    </a>
+  </div>
+
+  <div class="card">
+    <h2>Older Versions</h2>
+    <ul>
+      <li>
+        <a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.1.0.tar.xz?raw=1">
+          Download 1.1.0
+        </a>
+      </li>
+      <li>
+        <a href="https://github.com/ldstudios/polywebx/blob/main/launchEm-1.0.1.tar.xz?raw=1">
+          Download 1.0.1
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Releases Page</h2>
+    <p>
+      Want changelogs, tags, or future builds?
+    </p>
+    <a href="https://github.com/ldstudios/polywebx/releases">
+      View LaunchEm Releases on GitHub
+    </a>
+  </div>
+
+  <div class="card">
+    <h2>Fun Extras</h2>
+    <ul>
+      <li><a href="https://play2048.co/">Play 2048</a></li>
+      <li><a href="https://chromedino.com/">Chrome Dino (offline T‑Rex game)</a></li>
+      <li><a href="https://www.retrogames.cc/">Retro Games Emulator</a></li>
+      <li><a href="https://orteil.dashnet.org/cookieclicker/">Cookie Clicker</a></li>
+    </ul>
+  </div>
+
 </body>
 </html>
